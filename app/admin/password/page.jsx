@@ -1,11 +1,26 @@
 import NavAdmin from "@/components/NavAdmin";
 import Input from "@/components/Input";
 import Tombol from "@/components/Tombol";
-import CatatanBelumAktif from "@/components/CatatanBelumAktif";
+import { gantiPasswordAdmin } from "@/app/admin/actions";
 
-// US-05: form ganti password belum berfungsi.
-// Tugas peserta: admin yang sudah login bisa mengganti password-nya, diproses di server.
-export default function HalamanGantiPassword() {
+const pesanError = {
+  length: "Password baru harus terdiri dari minimal 8 karakter.",
+  mismatch: "Password baru dan konfirmasi tidak sama.",
+  configuration: "Konfigurasi Supabase belum lengkap. Hubungi pengelola aplikasi.",
+  connection: "Tidak dapat terhubung ke layanan. Periksa koneksi lalu coba lagi.",
+  session: "Sesi admin tidak dapat diverifikasi. Silakan masuk kembali.",
+  update: "Password gagal diubah. Pastikan password memenuhi persyaratan lalu coba lagi.",
+};
+
+export default async function HalamanGantiPassword({ searchParams }) {
+  const { error, status } = await searchParams;
+  const pesan =
+    typeof error === "string" && Object.hasOwn(pesanError, error)
+      ? { teks: pesanError[error], berhasil: false }
+      : status === "success"
+        ? { teks: "Password berhasil diubah.", berhasil: true }
+        : null;
+
   return (
     <div className="flex flex-col gap-6 py-8">
       <NavAdmin />
@@ -15,7 +30,7 @@ export default function HalamanGantiPassword() {
           Ganti password bawaan segera setelah pertama kali masuk. Minimal 8 karakter.
         </p>
       </div>
-      <form className="flex max-w-sm flex-col gap-4">
+      <form action={gantiPasswordAdmin} className="flex max-w-sm flex-col gap-4">
         <Input
           label="Password baru"
           name="password_baru"
@@ -36,7 +51,14 @@ export default function HalamanGantiPassword() {
           Simpan password
         </Tombol>
       </form>
-      <CatatanBelumAktif>Ganti password belum berfungsi: lihat US-05.</CatatanBelumAktif>
+      {pesan ? (
+        <p
+          role={pesan.berhasil ? "status" : "alert"}
+          className={pesan.berhasil ? "text-sm text-utama" : "text-sm text-bahaya"}
+        >
+          {pesan.teks}
+        </p>
+      ) : null}
     </div>
   );
 }

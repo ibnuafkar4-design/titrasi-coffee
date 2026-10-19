@@ -52,3 +52,67 @@ export async function keluarAdmin() {
 
   redirect("/admin/login");
 }
+
+export async function gantiPasswordAdmin(formData) {
+  const passwordBaru = formData.get("password_baru");
+  const konfirmasiPassword = formData.get("konfirmasi_password");
+
+  if (
+    typeof passwordBaru !== "string" ||
+    typeof konfirmasiPassword !== "string" ||
+    passwordBaru.length < 8
+  ) {
+    redirect("/admin/password?error=length");
+  }
+
+  if (passwordBaru !== konfirmasiPassword) {
+    redirect("/admin/password?error=mismatch");
+  }
+
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_PUBLISHABLE_KEY) {
+    redirect("/admin/password?error=configuration");
+  }
+
+  let supabase;
+  try {
+    supabase = await createSupabaseSessionClient();
+  } catch (error) {
+    console.error("Gagal membuat koneksi sesi Supabase untuk ganti password:", error);
+    redirect("/admin/password?error=connection");
+  }
+
+  let user;
+  let verificationError;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    user = data.user;
+    verificationError = error;
+  } catch (error) {
+    console.error("Gagal memverifikasi sesi admin untuk ganti password:", error);
+    redirect("/admin/password?error=session");
+  }
+
+  if (verificationError) {
+    console.error("Supabase Auth gagal memverifikasi sesi admin:", verificationError);
+    redirect("/admin/password?error=session");
+  }
+
+  if (!user) {
+    redirect("/admin/login");
+  }
+
+  let error;
+  try {
+    ({ error } = await supabase.auth.updateUser({ password: passwordBaru }));
+  } catch (authError) {
+    console.error("Gagal menghubungi Supabase Auth saat ganti password:", authError);
+    redirect("/admin/password?error=update");
+  }
+
+  if (error) {
+    console.error("Supabase Auth menolak perubahan password admin:", error);
+    redirect("/admin/password?error=update");
+  }
+
+  redirect("/admin/password?status=success");
+}
